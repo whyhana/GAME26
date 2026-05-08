@@ -1,0 +1,347 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.game-wrap { padding: 16px; max-width: 380px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.header { text-align: center; font-size: 18px; font-weight: 500; color: var(--color-text-primary); padding-top: 8px; }
+.score-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.badge { font-size: 13px; color: var(--color-text-secondary); background: var(--color-background-secondary); padding: 4px 10px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); }
+.timer-bar-wrap { height: 5px; background: var(--color-background-secondary); border-radius: 99px; overflow: hidden; }
+.timer-bar { height: 100%; border-radius: 99px; transition: width 1s linear, background 0.3s; }
+.target-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 18px; text-align: center; }
+.target-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 10px; letter-spacing: 0.05em; }
+.target-color { width: 100px; height: 100px; border-radius: var(--border-radius-lg); margin: 0 auto; border: 0.5px solid var(--color-border-tertiary); }
+.stage-indicator { display: flex; gap: 6px; justify-content: center; }
+.stage-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-border-secondary); transition: background 0.3s; }
+.stage-dot.active { background: var(--color-text-primary); }
+.stage-dot.done { background: var(--color-text-secondary); }
+.hint-row { display: flex; justify-content: center; }
+.hint-btn { font-size: 12px; color: var(--color-text-secondary); background: none; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 4px 12px; cursor: pointer; }
+.hint-btn:disabled { opacity: 0.35; }
+.hint-text { font-size: 12px; color: var(--color-text-secondary); text-align: center; min-height: 18px; }
+.mix-preview { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; justify-content: center; }
+.mix-slot { width: 48px; height: 48px; border-radius: var(--border-radius-md); border: 2px dashed var(--color-border-secondary); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
+.slot-lbl { font-size: 10px; color: var(--color-text-tertiary); }
+.op { font-size: 16px; color: var(--color-text-tertiary); flex-shrink: 0; }
+.result-slot { width: 48px; height: 48px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); flex-shrink: 0; background: var(--color-background-secondary); transition: background 0.4s; }
+.choices-label { font-size: 12px; color: var(--color-text-secondary); padding: 0 2px; }
+.choices-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.color-btn { aspect-ratio: 1; border-radius: var(--border-radius-lg); border: 3px solid transparent; cursor: pointer; transition: transform 0.12s, border-color 0.12s; position: relative; outline: none; padding: 0; width: 100%; }
+.color-btn:active { transform: scale(0.92); }
+.color-btn.selected { border-color: var(--color-text-primary); }
+.color-btn.correct-ans { border-color: #43A047; border-width: 3px; }
+.color-btn.wrong-sel { border-color: #E53935; border-width: 3px; }
+.color-btn .check { display: none; position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; background: rgba(0,0,0,0.5); border-radius: 50%; align-items: center; justify-content: center; font-size: 11px; color: #fff; line-height: 1; }
+.color-btn.selected .check { display: flex; }
+.answer-row { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.answer-swatch { width: 32px; height: 32px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); flex-shrink: 0; }
+.answer-label { font-size: 12px; color: var(--color-text-secondary); }
+.result-banner { border-radius: var(--border-radius-lg); padding: 14px; text-align: center; font-size: 14px; font-weight: 500; display: none; }
+.result-banner.correct { background: var(--color-background-success); color: var(--color-text-success); display: block; }
+.result-banner.wrong { background: var(--color-background-danger); color: var(--color-text-danger); display: block; }
+.action-btn { width: 100%; padding: 13px; border-radius: var(--border-radius-lg); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); font-size: 15px; font-weight: 500; color: var(--color-text-primary); cursor: pointer; transition: background 0.15s, transform 0.1s; }
+.action-btn:active { transform: scale(0.98); }
+.action-btn:hover { background: var(--color-background-secondary); }
+.stage-banner { text-align: center; font-size: 13px; font-weight: 500; padding: 8px 12px; border-radius: var(--border-radius-md); background: var(--color-background-secondary); color: var(--color-text-secondary); border: 0.5px solid var(--color-border-tertiary); }
+</style>
+
+<div class="game-wrap">
+  <div class="header">色混ぜゲーム</div>
+  <div class="score-row">
+    <span class="badge">スコア: <span id="score">0</span></span>
+    <span class="badge" id="stageBadge">初級</span>
+    <span class="badge">問題: <span id="qnum">1</span> / 15</span>
+  </div>
+  <div class="stage-indicator" id="stageIndicator"></div>
+  <div class="timer-bar-wrap"><div class="timer-bar" id="timerBar" style="width:100%;background:var(--color-text-primary)"></div></div>
+  <div class="target-card">
+    <div class="target-label">この色を作ってください</div>
+    <div class="target-color" id="targetSwatch"></div>
+  </div>
+  <div class="hint-row">
+    <button class="hint-btn" id="hintBtn">ヒントを使う（残り <span id="hintCount">5</span> 回）</button>
+  </div>
+  <div class="hint-text" id="hintText"></div>
+  <div class="mix-preview" id="mixPreview"></div>
+  <div class="choices-label" id="choicesLabel">色を2つ選んでください</div>
+  <div class="choices-grid" id="choicesGrid"></div>
+  <div class="result-banner" id="resultBanner"></div>
+  <div class="answer-row" id="answerRow" style="display:none;"></div>
+  <button class="action-btn" id="nextBtn" style="display:none;">次の問題 →</button>
+</div>
+
+<script>
+const COLORS = {
+  red:      { hex:"#E53935", label:"赤" },
+  blue:     { hex:"#1E88E5", label:"青" },
+  yellow:   { hex:"#FDD835", label:"黄" },
+  white:    { hex:"#F5F5F5", label:"白" },
+  black:    { hex:"#212121", label:"黒" },
+  green:    { hex:"#43A047", label:"緑" },
+  orange:   { hex:"#FB8C00", label:"橙" },
+  pink:     { hex:"#EC407A", label:"ピンク" },
+  purple:   { hex:"#8E24AA", label:"紫" },
+  brown:    { hex:"#795548", label:"茶" },
+  navy:     { hex:"#283593", label:"紺" },
+  lime:     { hex:"#8BC34A", label:"黄緑" },
+  gray:     { hex:"#9E9E9E", label:"灰" },
+  cyan:     { hex:"#00BCD4", label:"シアン" },
+  magenta:  { hex:"#E91E63", label:"マゼンタ" },
+  teal:     { hex:"#009688", label:"青緑" },
+  maroon:   { hex:"#B71C1C", label:"栗色" },
+  indigo:   { hex:"#3F51B5", label:"藍" },
+  lavender: { hex:"#AB47BC", label:"ラベンダー" },
+  coral:    { hex:"#FF7043", label:"珊瑚" },
+  amber:    { hex:"#FFA000", label:"琥珀" },
+  olive:    { hex:"#827717", label:"オリーブ" },
+};
+
+function mixHex(...hexes) {
+  const p = s => parseInt(s, 16);
+  const r = Math.round(hexes.reduce((a,h)=>a+p(h.slice(1,3)),0)/hexes.length);
+  const g = Math.round(hexes.reduce((a,h)=>a+p(h.slice(3,5)),0)/hexes.length);
+  const b = Math.round(hexes.reduce((a,h)=>a+p(h.slice(5,7)),0)/hexes.length);
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+
+// 15問: 1-5初級(2色,簡単,時間なし), 6-10中級(2色,紛らわしい,30秒), 11-15上級(3色,25秒)
+const QUESTIONS = [
+  // 初級 (問1-5): 2色, わかりやすいダミー, 時間制限なし
+  { stage:1, need:2, target:"purple",  answer:["red","blue"],     wrong:["yellow","green","orange","white"],   hint:"暖色と寒色を混ぜると…" },
+  { stage:1, need:2, target:"orange",  answer:["red","yellow"],   wrong:["blue","green","purple","white"],     hint:"明るい暖色2色です" },
+  { stage:1, need:2, target:"green",   answer:["blue","yellow"],  wrong:["red","orange","purple","white"],     hint:"三原色のうちの2色" },
+  { stage:1, need:2, target:"pink",    answer:["red","white"],    wrong:["blue","yellow","green","orange"],    hint:"薄くするには何を足す？" },
+  { stage:1, need:2, target:"gray",    answer:["white","black"],  wrong:["red","blue","yellow","green"],       hint:"明暗を混ぜると…" },
+  // 中級 (問6-10): 2色, 紛らわしいダミー, 30秒
+  { stage:2, need:2, target:"navy",    answer:["blue","black"],   wrong:["indigo","teal","purple","cyan"],     hint:"暗くするには何を足す？" },
+  { stage:2, need:2, target:"lime",    answer:["green","yellow"], wrong:["olive","cyan","teal","orange"],      hint:"緑を明るくするには？" },
+  { stage:2, need:2, target:"brown",   answer:["red","green"],    wrong:["orange","olive","maroon","amber"],   hint:"補色に近い組み合わせ" },
+  { stage:2, need:2, target:"lavender",answer:["purple","white"], wrong:["pink","magenta","blue","indigo"],    hint:"薄くするには何を足す？" },
+  { stage:2, need:2, target:"teal",    answer:["blue","green"],   wrong:["cyan","navy","lime","indigo"],       hint:"寒色2色が答えです" },
+  // 上級 (問11-15): 3色, 紛らわしいダミー, 25秒
+  { stage:3, need:3, target:"brown",   answer:["red","yellow","blue"],   wrong:["orange","green","purple","black"],  hint:"三原色をすべて混ぜると…" },
+  { stage:3, need:3, target:"olive",   answer:["green","yellow","black"], wrong:["lime","orange","brown","teal"],    hint:"緑系を暗くすると…" },
+  { stage:3, need:3, target:"maroon",  answer:["red","purple","black"],  wrong:["brown","magenta","navy","coral"],   hint:"赤を暗く、紫がかった色" },
+  { stage:3, need:3, target:"coral",   answer:["red","orange","white"],  wrong:["pink","amber","yellow","lime"],     hint:"赤橙系を明るく" },
+  { stage:3, need:3, target:"indigo",  answer:["blue","purple","black"], wrong:["navy","teal","magenta","maroon"],   hint:"青と紫を暗くすると…" },
+];
+
+const STAGE_TIME = { 1: 0, 2: 30, 3: 25 };
+const STAGE_LABEL = { 1:"初級", 2:"中級", 3:"上級" };
+const STAGE_COLOR = {
+  1: "background:var(--color-background-success);color:var(--color-text-success)",
+  2: "background:var(--color-background-warning);color:var(--color-text-warning)",
+  3: "background:var(--color-background-danger);color:var(--color-text-danger)",
+};
+
+let qIndex=0, score=0, selected=[], answered=false, hintsLeft=5, timerInterval=null, timeLeft=0;
+
+function shuffle(a){ return [...a].sort(()=>Math.random()-0.5); }
+
+// stage dots
+function renderDots(){
+  const ind = document.getElementById('stageIndicator');
+  ind.innerHTML = '';
+  QUESTIONS.forEach((_,i)=>{
+    const d=document.createElement('div');
+    d.className='stage-dot'+(i<qIndex?' done':i===qIndex?' active':'');
+    ind.appendChild(d);
+  });
+}
+
+function startTimer(seconds){
+  clearInterval(timerInterval);
+  const bar=document.getElementById('timerBar');
+  if(seconds===0){
+    bar.style.width='100%';
+    bar.style.background='var(--color-text-primary)';
+    return;
+  }
+  timeLeft=seconds;
+  bar.style.transition='none'; bar.style.width='100%'; bar.style.background='var(--color-text-primary)';
+  setTimeout(()=>{ bar.style.transition='width 1s linear, background 0.3s'; },50);
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    const pct=Math.max(0,(timeLeft/seconds)*100);
+    bar.style.width=pct+'%';
+    if(pct<30) bar.style.background='#E53935';
+    else if(pct<55) bar.style.background='#FB8C00';
+    if(timeLeft<=0){ clearInterval(timerInterval); if(!answered) timeUp(); }
+  },1000);
+}
+
+function buildMixPreview(need){
+  const preview=document.getElementById('mixPreview');
+  preview.innerHTML='';
+  for(let i=0;i<need;i++){
+    const slot=document.createElement('div');
+    slot.className='mix-slot'; slot.id='slot'+i;
+    slot.innerHTML='<span class="slot-lbl">?</span>';
+    preview.appendChild(slot);
+    if(i<need-1){
+      const op=document.createElement('div'); op.className='op'; op.textContent='+';
+      preview.appendChild(op);
+    }
+  }
+  const eq=document.createElement('div'); eq.className='op'; eq.textContent='=';
+  preview.appendChild(eq);
+  const res=document.createElement('div'); res.className='result-slot'; res.id='mixResult';
+  preview.appendChild(res);
+}
+
+function updateSlots(){
+  const q=QUESTIONS[qIndex];
+  for(let i=0;i<q.need;i++){
+    const s=document.getElementById('slot'+i);
+    if(selected.length>i){ s.style.background=COLORS[selected[i]].hex; s.style.borderStyle='solid'; s.innerHTML=''; }
+    else { s.style.background=''; s.style.borderStyle='dashed'; s.innerHTML='<span class="slot-lbl">?</span>'; }
+  }
+  const mr=document.getElementById('mixResult');
+  if(selected.length===q.need){
+    mr.style.background=mixHex(...selected.map(k=>COLORS[k].hex));
+  } else {
+    mr.style.background='var(--color-background-secondary)';
+  }
+}
+
+function showAnswer(q){
+  document.querySelectorAll('.color-btn').forEach(btn=>{
+    const key=btn.dataset.key;
+    if(q.answer.includes(key)) btn.classList.add('correct-ans');
+    else if(selected.includes(key)) btn.classList.add('wrong-sel');
+  });
+  const row=document.getElementById('answerRow');
+  const parts=q.answer.map(k=>`
+    <div class="answer-swatch" style="background:${COLORS[k].hex}"></div>
+    <span class="answer-label">${COLORS[k].label}</span>
+  `).join('<span style="font-size:14px;color:var(--color-text-tertiary)">＋</span>');
+  row.innerHTML=`<span style="font-size:12px;color:var(--color-text-secondary)">正解：</span>${parts}`;
+  row.style.display='flex';
+}
+
+function timeUp(){
+  answered=true;
+  const q=QUESTIONS[qIndex];
+  const banner=document.getElementById('resultBanner');
+  banner.textContent='時間切れ！';
+  banner.className='result-banner wrong';
+  showAnswer(q);
+  const nb=document.getElementById('nextBtn');
+  nb.textContent=qIndex<QUESTIONS.length-1?'次の問題 →':'結果を見る';
+  nb.style.display='';
+}
+
+function judge(){
+  clearInterval(timerInterval);
+  answered=true;
+  const q=QUESTIONS[qIndex];
+  const correct=q.answer.every(a=>selected.includes(a))&&selected.every(s=>q.answer.includes(s));
+  const banner=document.getElementById('resultBanner');
+  if(correct){
+    const tl=STAGE_TIME[q.stage];
+    const pts=tl===0?1:timeLeft>=tl*0.7?3:timeLeft>=tl*0.4?2:1;
+    score+=pts;
+    document.getElementById('score').textContent=score;
+    banner.textContent=`正解！ +${pts}点`;
+    banner.className='result-banner correct';
+  } else {
+    banner.textContent='不正解！';
+    banner.className='result-banner wrong';
+    showAnswer(q);
+  }
+  const nb=document.getElementById('nextBtn');
+  nb.textContent=qIndex<QUESTIONS.length-1?'次の問題 →':'結果を見る';
+  nb.style.display='';
+}
+
+function loadQuestion(){
+  answered=false; selected=[];
+  const q=QUESTIONS[qIndex];
+  const prevStage=qIndex>0?QUESTIONS[qIndex-1].stage:0;
+
+  document.getElementById('targetSwatch').style.background=COLORS[q.target].hex;
+  document.getElementById('qnum').textContent=qIndex+1;
+  document.getElementById('score').textContent=score;
+  document.getElementById('resultBanner').className='result-banner';
+  document.getElementById('resultBanner').textContent='';
+  document.getElementById('nextBtn').style.display='none';
+  document.getElementById('hintText').textContent='';
+  document.getElementById('hintBtn').disabled=hintsLeft<=0;
+  document.getElementById('hintCount').textContent=hintsLeft;
+  document.getElementById('answerRow').style.display='none';
+  document.getElementById('answerRow').innerHTML='';
+
+  const sb=document.getElementById('stageBadge');
+  sb.textContent=STAGE_LABEL[q.stage];
+  sb.style.cssText=STAGE_COLOR[q.stage]+';font-size:13px;padding:4px 10px;border-radius:var(--border-radius-md);border:0.5px solid transparent;';
+
+  document.getElementById('choicesLabel').textContent=`色を${q.need}つ選んでください`;
+
+  buildMixPreview(q.need);
+  renderDots();
+
+  // ステージ変わったとき枚数も変わるので通知
+  if(q.stage!==prevStage && qIndex>0){
+    // brief flash handled by badge color change
+  }
+
+  const numWrong=6-q.need; // 6択固定
+  const options=shuffle([...q.answer,...shuffle(q.wrong).slice(0,numWrong)]);
+  const grid=document.getElementById('choicesGrid');
+  grid.innerHTML='';
+  options.forEach(key=>{
+    const btn=document.createElement('button');
+    btn.className='color-btn'; btn.dataset.key=key;
+    btn.style.background=COLORS[key].hex;
+    btn.innerHTML='<span class="check">✓</span>';
+    btn.onclick=()=>onSelect(key,btn);
+    grid.appendChild(btn);
+  });
+
+  startTimer(STAGE_TIME[q.stage]);
+}
+
+function onSelect(key,btn){
+  if(answered)return;
+  const q=QUESTIONS[qIndex];
+  if(btn.classList.contains('selected')){
+    btn.classList.remove('selected');
+    selected=selected.filter(k=>k!==key);
+  } else {
+    if(selected.length>=q.need)return;
+    selected.push(key); btn.classList.add('selected');
+  }
+  updateSlots();
+  if(selected.length===q.need) judge();
+}
+
+document.getElementById('hintBtn').onclick=()=>{
+  if(hintsLeft<=0||answered)return;
+  hintsLeft--;
+  document.getElementById('hintCount').textContent=hintsLeft;
+  document.getElementById('hintText').textContent='ヒント: '+QUESTIONS[qIndex].hint;
+  if(hintsLeft<=0) document.getElementById('hintBtn').disabled=true;
+};
+
+document.getElementById('nextBtn').onclick=()=>{
+  qIndex++;
+  if(qIndex>=QUESTIONS.length){ showFinal(); return; }
+  loadQuestion();
+};
+
+function showFinal(){
+  clearInterval(timerInterval);
+  const maxScore=5*1+5*3+5*3;
+  const pct=Math.round((score/maxScore)*100);
+  const msg=pct>=80?'色の達人です！':pct>=55?'なかなかの色彩センス！':pct>=35?'もう少し練習しましょう！':'色の勉強をしてみよう！';
+  document.querySelector('.game-wrap').innerHTML=`
+    <div style="padding:32px 16px;text-align:center;display:flex;flex-direction:column;gap:20px;align-items:center;">
+      <div style="font-size:22px;font-weight:500;color:var(--color-text-primary);">ゲーム終了！</div>
+      <div style="font-size:48px;font-weight:500;color:var(--color-text-primary);">${score}<span style="font-size:18px;color:var(--color-text-secondary);"> / ${maxScore}点</span></div>
+      <div style="font-size:15px;color:var(--color-text-secondary);">${msg}</div>
+      <div style="width:100%;height:0.5px;background:var(--color-border-tertiary);"></div>
+      <button onclick="location.reload()" style="width:100%;padding:14px;border-radius:var(--border-radius-lg);border:none;background:var(--color-text-primary);color:var(--color-background-primary);font-size:15px;font-weight:500;cursor:pointer;">もう一度挑戦する</button>
+    </div>`;
+}
+
+loadQuestion();
+</script>
